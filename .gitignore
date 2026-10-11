@@ -1,0 +1,13 @@
+# Obsidian workspace (local uniquement)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Fichiers temporaires
+*.tmp
+*.bak
+*~
