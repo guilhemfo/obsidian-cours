@@ -1,144 +1,195 @@
 ---
-title: "Synthèse TP C S3 — Flying Machines (Structures, I/O & Modélisation)"
+title: "Synthèse TP C S3 — Flying Machines (Entrées/Sorties, Parsing & Structures)"
 matiere: "Programmation"
 date: "2026-10-12"
-tags: [fiche, revision, programmation, c, epita, s3, bimestriel-5, io, structures, math]
+tags: [fiche, revision, programmation, c, epita, s3, bimestriel-5, io, parsing, structures]
 source: "EPITA S3 FISE 2030 – Programmation Avancée en C (PROG-205 P-02)"
 ---
 
-# ✈️ TP Flying Machines : Entrées/Sorties, Parsing & Modélisation en C
+# ✈️ TP Flying Machines : Entrées/Sorties, Parsing Robuste & Modélisation en C
 
 > **Matière :** Programmation Système Avancée en C (EPITA Promo 2030 - S3)  
-> **Cadre :** Bimestre 5 — Projet `flying_machines` (`prog-205-p-02`)  
-> **Concepts clés :** `stdio.h`, parsing de fichiers structurés (`fgets`, `strchr`, `strtod`), manipulation de chaînes sécurisée (`snprintf`), encapsulation et intégration de bibliothèques statiques tierces (`libporco.a`, `libhangar.a`).
+> **Cadre :** Bimestre 5 — Projet `flying_machines` (`prog-205-p-02`)
 
 ---
 
-## 🎯 Ce qu'il faut absolument retenir
+## 🎯 Points Clés
 
-1. **Lecture et Parsing robuste de fichiers texte :**
-   - Utilisation systématique de `fgets(buf, sizeof(buf), f)` (évite les buffer overflows de `gets` ou `fscanf` non borné).
-   - Découpage par délimiteur via `strchr(buf, ';')` : substitution par `'\0'` pour isoler le champ gauche, puis passage du pointeur au caractère suivant `p + 1`.
-   - Conversion numérique fiable avec `strtod(str, &endptr)` : vérification obligatoire que `endptr != str` pour valider qu'un nombre a bien été lu.
-2. **Génération de chaînes formatées et allocation dynamique :**
-   - Règle d'or avec `snprintf` : appeler d'abord ou utiliser un buffer temporaire pour récupérer la taille exacte nécessaire :
-     ```c
-     int len = snprintf(NULL, 0, format, ...);
-     char *str = malloc(len + 1);
-     snprintf(str, len + 1, format, ...);
-     ```
-   - Vérifier scrupuleusement les retours d'allocation (`malloc == NULL`).
-3. **Contrat d'API et Bibliothèques Statiques (`libporco.a`, `libhangar.a`) :**
-   - Ne jamais tenter de réimplémenter ou de modifier les symboles fournis en bibliothèque fermée.
-   - Respecter les sentinelles de retour : `porco_knots_to_ms` renvoie `-1.0` si négatif, `porco_parse_code` renvoie `-1` si code invalide.
-   - Les chaînes renvoyées par des bibliothèques (`porco_machine_class`) sont en lecture seule (mémoire statique) : **ne jamais faire `free()` dessus**.
-4. **Calculs balistiques et flottants (`math.h`) :**
-   - Attention aux conversions d'unités : les fonctions trigonométriques du C (`sin`, `cos`) exigent des **radians**.
-   - Conversion : $\text{rad} = \text{deg} \times \frac{\pi}{180}$ (avec `M_PI` issu de `#define _USE_MATH_DEFINES`).
+- Parsing sécurisé de données tabulaires (CSV/DSV) sans débordement de tampon mémoire.
+- Différence cruciale entre conversion de données fragile (`atoi`, `atof`) et robuste (`strtod`, `strtol`).
+- Dimensionnement exact de tampons dynamiques avec `snprintf(NULL, 0, ...)` et `malloc`.
+- Intégration de bibliothèques tierces compilées (`.a`) avec respect des contrats d'API et de la gestion de mémoire statique vs dynamique.
 
 ---
 
-## 🛠️ 1. Architecture du Projet
+## 📖 Cours & Fonctions Détaillées
 
-Le projet est divisé en deux sous-systèmes :
-- **`fundamentals/`** :
-  - `physics.c` : Calculs cinématiques (vitesse $V_x, V_y$, portée, flèche $H_{\text{max}}$, temps de vol).
-  - `records.c` : Lecture de catalogues de machines (`inventory.txt`), conversion d'unités (nœuds vers m/s) et écriture de fiches descriptives formatées.
-  - `report.c` : Génération de comptes-rendus de vol et export filtré selon un seuil d'altitude.
-- **`proficiencies/`** :
-  - `hangar.h` / `libhangar.a` : Manipulation de conteneurs génériques opaques (`HangarList`), tri par fonction de comparaison (`qsort`-like), gestion du cycle de vie mémoire avec destructeurs personnalisés.
-  - `matching.c` & `simulation.c` : Appariement machines / missions selon les contraintes environnementales.
+### 1. `fgets` — Lecture sécurisée de flux ligne par ligne
 
----
-
-## 🔍 2. Techniques de Code Clés & Bonnes Pratiques
-
-### A. Parsing sans crash d'un fichier CSV/DSV (Délimiteur `;`)
+#### 🔍 Définition formelle & Fonctionnement interne
 ```c
-double total_declared_speed(const char *filepath) {
-    FILE *f = fopen(filepath, "r");
-    if (!f)
-        return -1.0;
+char *fgets(char *s, int size, FILE *stream);
+```
+`fgets` lit des caractères depuis le flux `stream` et les stocke dans le tableau `s` jusqu'à rencontrer un caractère de saut de ligne (`\n`), la fin de fichier (`EOF`), ou jusqu'à avoir lu au maximum `size - 1` caractères. Il ajoute **toujours** un caractère nul `'\0'` final. Si la ligne est lue en entier, le `\n` est conservé dans `s`.
 
-    char buf[256];
-    double total = 0.0;
+#### 💡 À quoi ça sert concrètement ? (Utilité en pratique)
+En C, utiliser `gets()` est une faille de sécurité critique car il n'impose aucune limite de taille (provoquant des attaques par buffer overflow). De même, `fscanf(f, "%s", ...)` ne s'arrête pas au bout de la ligne et déborde si le mot est trop long.  
+`fgets` est l'outil standard pour charger des fichiers texte ligne par ligne de manière prédictible et bornée en mémoire.
 
-    while (fgets(buf, sizeof(buf), f)) {
-        char *sep = strchr(buf, ';');
-        if (!sep)
-            continue; // Ligne malformée, on ignore
+#### 💻 Exemple concret
+```c
+FILE *f = fopen("inventory.txt", "r");
+if (!f) return -1;
 
-        char *end;
-        double knots = strtod(sep + 1, &end);
-        if (end != sep + 1) { // Vérifie qu'au moins un chiffre a été consommé
-            double ms = porco_knots_to_ms(knots);
-            if (ms >= 0.0)
-                total += ms;
-        }
-    }
-    fclose(f);
-    return total;
+char buffer[256];
+// On lit au maximum 255 caractères par itération
+while (fgets(buffer, sizeof(buffer), f) != NULL) {
+    // buffer contient une ligne complète terminée par '\n\0'
+    printf("Ligne lue : %s", buffer);
 }
+fclose(f);
 ```
 
-### B. Écriture sécurisée de rapports formatés
+---
+
+### 2. `strchr` — Recherche et scission de chaînes en place
+
+#### 🔍 Définition formelle & Fonctionnement interne
 ```c
-int write_machine_cards(const char *in_path, const char *out_path) {
-    FILE *in = fopen(in_path, "r");
-    if (!in) return -1;
+char *strchr(const char *s, int c);
+```
+Parcourt la chaîne `s` jusqu'à trouver la première occurrence de l'octet `c` (converti en `char`) ou le caractère nul `'\0'`. Renvoie un pointeur direct vers cet emplacement dans `s`, ou `NULL` si le caractère est absent.
 
-    FILE *out = fopen(out_path, "w");
-    if (!out) {
-        fclose(in);
-        return -1;
-    }
+#### 💡 À quoi ça sert concrètement ? (Utilité en pratique)
+Idéal pour parser des formats à séparateurs (ex: fichiers CSV avec virgules `,` ou points-virgules `;`). Plutôt que de réallouer de la mémoire avec `strtok` (qui n'est pas thread-safe) ou des copies manuelles, on remplace le délimiteur directement par `'\0'`. La chaîne d'origine est ainsi découpée en deux sous-chaînes instantanément en mémoire sans allocation supplémentaire ($\mathcal{O}(1)$ en espace).
 
-    char buf[256];
-    while (fgets(buf, sizeof(buf), in)) {
-        char *sep = strchr(buf, ';');
-        if (!sep) continue;
-
-        *sep = '\0'; // Coupe la chaîne en place pour isoler le nom
-        char *name = buf;
-        char *speed_str = sep + 1;
-
-        char *end;
-        double knots = strtod(speed_str, &end);
-        if (end == speed_str) continue;
-
-        double speed_ms = porco_knots_to_ms(knots);
-        const char *classe = porco_machine_class(speed_ms);
-
-        fprintf(out, "%s | %.2f m/s | %s\n", name, speed_ms, classe);
-    }
-
-    fclose(in);
-    fclose(out);
-    return 0;
+#### 💻 Exemple concret
+```c
+// Ligne lue : "Savoia S.21;85.50\n"
+char *sep = strchr(buffer, ';');
+if (sep != NULL) {
+    *sep = '\0';            // Remplace ';' par '\0'
+    char *nom = buffer;     // "Savoia S.21"
+    char *vitesse = sep + 1; // "85.50\n"
 }
 ```
 
 ---
 
-## ⚠️ Pièges Classiques Rencontrés
+### 3. `strtod` — Conversion numérique rigoureuse avec validation
 
-| Piège | Conséquence | Solution |
-| :--- | :--- | :--- |
-| Oubli de `fclose(f)` en cas d'erreur prématurée | Fuite de descripteur de fichier (*file descriptor leak*) | Toujours fermer les fichiers ouverts avant tout `return -1`. |
-| Oubli du `+ 1` pour le caractère nul `'\0'` lors d'un `malloc` | Débordement mémoire d'un octet (*off-by-one heap overflow*) | Allouer systématiquement `strlen(s) + 1` ou `len_snprintf + 1`. |
-| Passer des degrés à `sin()` ou `cos()` | Résultats balistiques complètement faux | Convertir impérativement en radians : `angle * (M_PI / 180.0)`. |
-| `free()` sur une chaîne constante statique | *Invalid free / Segmentation fault* | Ne libérer que la mémoire obtenue via `malloc`, `calloc` ou `realloc`. |
+#### 🔍 Définition formelle & Fonctionnement interne
+```c
+double strtod(const char *nptr, char **endptr);
+```
+Convertit la portion initiale de la chaîne `nptr` en un nombre flottant `double`. Ignore les espaces initiaux, lit les chiffres, points et exposants. Si `endptr` n'est pas `NULL`, `strtod` y stocke l'adresse du **premier caractère non consommé**.
+
+#### 💡 À quoi ça sert concrètement ? (Utilité en pratique)
+`atof("abc")` renvoie `0.0`, tout comme `atof("0.0")`. Il est donc impossible de savoir si la donnée était réellement zéro ou si le texte était corrompu !  
+Avec `strtod`, si `endptr == nptr`, cela prouve qu'**aucun chiffre n'a pu être lu**. Si `endptr != nptr`, la conversion est valide.
+
+#### 💻 Exemple concret
+```c
+char *vitesse_str = "120.45 knots";
+char *end;
+double knots = strtod(vitesse_str, &end);
+
+if (end == vitesse_str) {
+    // Échec de conversion : la chaîne ne commence pas par un nombre
+    fprintf(stderr, "Erreur : donnée invalide\n");
+} else {
+    // Succès : knots = 120.45, et *end pointe sur " knots"
+    printf("Vitesse extraite : %.2f\n", knots);
+}
+```
 
 ---
 
-## ❓ Questions de Révision
+### 4. `snprintf` — Formatage sécurisé & Dimensionnement dynamique
 
-1. **Pourquoi préfère-t-on `strtod` à `atof` dans du code C robuste ?**
-   - `atof` ne fournit aucun moyen de savoir si la conversion a échoué ou si la chaîne contenait zéro (`0.0`). `strtod` fournit `endptr`, permettant de valider les caractères effectivement lus.
-2. **Comment `snprintf` protège-t-il contre les débordements de tampon par rapport à `sprintf` ?**
-   - `snprintf` prend en paramètre la taille maximale du tampon `size` et garantit qu'il n'écrira jamais au-delà, tout en garantissant la présence du caractère nul terminateur.
-3. **Quel est le rôle d'un pointeur de fonction `HangarDestroyFn` passé à un conteneur générique ?**
-   - Permettre au conteneur de libérer la mémoire interne allouée dynamiquement par chaque élément lors de la destruction du conteneur sans avoir à connaître la structure interne de l'élément.
+#### 🔍 Définition formelle & Fonctionnement interne
+```c
+int snprintf(char *str, size_t size, const char *format, ...);
+```
+Écrit au plus `size` octets (en incluant le `'\0'` final) dans `str`. **Valeur de retour clé :** renvoie le nombre total de caractères qui *auraient été écrits* si `size` avait été infinie (hors `'\0'`). Si la valeur retournée est $\ge size$, une troncature s'est produite.
+
+#### 💡 À quoi ça sert concrètement ? (Utilité en pratique)
+1. **Éviter les buffer overflows :** Remplace définitivement `sprintf` qui écrit aveuglément en mémoire.
+2. **Dimensionner un `malloc` au juste octet :** En appelant `snprintf(NULL, 0, format, ...)`, la fonction ne modifie aucune mémoire mais renvoie la taille exacte nécessaire pour allouer la chaîne résultante.
+
+#### 💻 Exemple concret (Pattern d'allocation dynamique parfaite)
+```c
+char *generate_flight_summary(double velocity, double angle_rad, const char *rating) {
+    // 1. Calcul du nombre de caractères nécessaires
+    int len = snprintf(NULL, 0, 
+        "Vitesse: %.2f m/s, Angle: %.2f rad, Statut: %s.", 
+        velocity, angle_rad, rating);
+
+    if (len < 0) return NULL;
+
+    // 2. Allocation exacte (+1 pour le '\0')
+    char *result = malloc(len + 1);
+    if (!result) return NULL;
+
+    // 3. Écriture garantie sans débordement
+    snprintf(result, len + 1, 
+        "Vitesse: %.2f m/s, Angle: %.2f rad, Statut: %s.", 
+        velocity, angle_rad, rating);
+
+    return result; // L'appelant devra libérer cette mémoire
+}
+```
 
 ---
-*Index général : [[Programmation/README]]* | *Accueil : [[Bienvenue]]*
+
+### 5. `M_PI` & Conversions Trigonométriques (`math.h`)
+
+#### 🔍 Définition formelle & Fonctionnement interne
+Les fonctions de la bibliothèque standard `math.h` (`sin`, `cos`, `tan`) attendent **exclusivement des angles en radians**. La constante $\pi$ est définie sous la macro `M_PI` (accessible avec `#define _USE_MATH_DEFINES` avant l'inclusion de `math.h`).
+
+#### 💡 À quoi ça sert concrètement ? (Utilité en pratique)
+Dans la plupart des spécifications, les angles de tir ou de vol sont fournis en degrés par l'utilisateur ou par des capteurs. Injecter directement des degrés dans `sin()` produit des résultats mathématiques aberrants.
+
+#### 💻 Exemple concret
+```c
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+double degrees_to_radians(double deg) {
+    return deg * (M_PI / 180.0);
+}
+
+// Calcul de la portée maximale : R = (v^2 * sin(2*theta)) / g
+double calculate_range(double velocity, double angle_deg) {
+    double angle_rad = degrees_to_radians(angle_deg);
+    return (velocity * velocity * sin(2.0 * angle_rad)) / 9.81;
+}
+```
+
+---
+
+## ⚠️ Pièges Classiques & Ce qu'il faut retenir absolument
+
+> [!important]
+> **Gestion des descripteurs de fichiers (`FILE *`) :**  
+> Dès lors qu'un fichier a été ouvert avec `fopen`, chaque branche de code menant à un `return` d'erreur doit impérativement comporter un `fclose`. Sinon, le système d'exploitation épuise sa table de descripteurs de fichiers (*file descriptor leak*).
+
+> [!warning]
+> **Piège de propriété mémoire avec les bibliothèques tierces :**  
+> Si une fonction de bibliothèque (comme `porco_machine_class`) retourne un `const char *`, cette chaîne réside dans la mémoire statique en lecture seule de la bibliothèque.  
+> **Faire `free((char *)classe)` provoquera un crash instantané (`SIGSEGV` ou `free(): invalid pointer`).**
+
+---
+
+## ❓ Questions de Révision & Cas Pratiques
+
+1. **Pourquoi `fgets` conserve-t-il le caractère `\n` dans son tampon, et comment le retirer proprement ?**
+   - Il le conserve pour indiquer au programmeur que la ligne entière a été lue. Pour le retirer : `buffer[strcspn(buffer, "\n")] = '\0';`.
+2. **Si `strtod` renvoie `0.0`, comment savoir si la chaîne contenait le chiffre zéro ou du texte invalide ?**
+   - En vérifiant `endptr` : si `endptr != nptr`, la chaîne contenait bien un zéro valide ; si `endptr == nptr`, la conversion a échoué.
+3. **À quoi sert le passage par `size_t element_size` dans un conteneur générique comme `hangar_create` ?**
+   - Cela permet au conteneur de manipuler des éléments de n'importe quel type de données en effectuant des copies mémoires de taille arbitraire avec `memcpy`, rendant le conteneur totalement polymorphe.
+
+---
+*Fiche suivante : [[TP-C-Howls-Machine-SDL2]]*  
+*Index général : [[Programmation/README]]*

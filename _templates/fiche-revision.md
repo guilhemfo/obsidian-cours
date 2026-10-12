@@ -14,47 +14,37 @@ tags: [fiche, revision, {{MATIERE_TAG}}]
 ## 🎯 Points Clés
 
 - 
-- 
-- 
 
 ---
 
-## 📖 Résumé du Cours
+## 📖 Cours & Notions Détaillées
 
-<!-- Résumé structuré du contenu principal -->
+### 1. [Nom du concept / de la fonction]
+
+#### 🔍 Définition formelle & Fonctionnement interne
+<!-- Qu'est-ce que c'est exactement ? Comment cela fonctionne sous le capot ? -->
+
+#### 💡 À quoi ça sert concrètement ? (Utilité en pratique)
+<!-- Pourquoi l'utiliser plutôt qu'autre chose ? Quel problème réel cela résout-il en ingénierie/informatique ? -->
+
+#### 💻 Exemple concret & application réelle
+<!-- Code commenté ligne par ligne ou calcul détaillé montrant son utilisation -->
 
 ---
 
-## 🔑 Définitions Importantes
-
-| Terme | Définition |
-|-------|-----------|
-|       |           |
-
----
-
-## 🧠 À Retenir Absolument
+## ⚠️ Pièges Classiques & Ce qu'il faut retenir absolument
 
 > [!important]
 > 
 
----
-
-## 📝 Exemples / Applications
-
-### Exemple 1 :
-
-
-### Exemple 2 :
-
+> [!warning]
+> 
 
 ---
 
-## ❓ Questions de Révision
+## ❓ Questions de Révision & Cas Pratiques
 
 1. 
-2. 
-3. 
 
 ---
 
