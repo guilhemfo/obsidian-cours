@@ -1,31 +1,35 @@
-# 🎓 Fiches de Révision
+# 🎓 Espace de Révision Obsidian — EPITA S3 (Promo 2030)
 
-Bienvenue dans ton espace de révision organisé avec **Obsidian** et synchronisé sur **GitHub**.
+Bienvenue dans ton coffre de fiches de révision structurées, synchronisées automatiquement avec ton dépôt GitHub.
 
-## 📁 Structure
+---
+
+## 📚 Matières disponibles
+
+### 💻 Informatique & Programmation
+- [[Informatique/README|📘 Architecture & Assembleur 68000]] (Cours complet & TPs 1, 2, 3)
+- [[Programmation/README|💻 Programmation Système Avancée en C]] (TPs Bimestre 5 : Flying Machines & SDL2)
+- [[Algorithmique/README|🧠 Algorithmique Avancée]] (Graphes, Parcours DFS/BFS, Connexité, ABR & AVL)
+
+### 📐 Mathématiques
+- [[Maths/README|📐 Mathématiques S3]] (Séries Numériques, Développements Limités, Probabilités & Séries Entières)
+
+### ⚡ Sciences Physiques & Électronique
+- [[Physique/README|🧲 Physique : Électrostatique & Magnétostatique (EM2)]]
+- [[Electronique/README|🔋 Électronique : Les Transistors Bipolaires (BJT)]]
+
+---
+
+## 🛠️ Structure du coffre
 
 ```
 cours/
-├── Maths/          → Fiches de mathématiques
-├── Physique/       → Fiches de physique
-├── Histoire/       → Fiches d'histoire
-├── Langues/        → Fiches de langues
-├── Informatique/   → Fiches d'informatique
-├── _templates/     → Modèles de fiches
-└── _scripts/       → Scripts utilitaires
+├── Algorithmique/    → Théorie des graphes, Arbres, AVL
+├── Electronique/     → Transistors BJT, régimes, polarisation
+├── Informatique/     → Assembleur Motorola 68000, CPU, flags
+├── Maths/            → Séries, DL, Probas, Séries Entières
+├── Physique/         → Électrostatique, Magnétostatique, Gauss
+├── Programmation/    → TPs C S3 Bimestre 5 (I/O, SDL2)
+├── _templates/       → Modèles de fiches Obsidian
+└── _scripts/         → Script de synchronisation automatique Git
 ```
-
-## 🚀 Comment ça marche
-
-1. Tu envoies un cours à l'IA
-2. L'IA génère une fiche de révision structurée
-3. La fiche est sauvegardée dans le bon dossier
-4. Elle est automatiquement synchronisée sur GitHub
-
-## 📊 Matières
-
-- [[Maths/README|📐 Mathématiques]]
-- [[Physique/README|⚗️ Physique]]
-- [[Histoire/README|📜 Histoire]]
-- [[Langues/README|🌍 Langues]]
-- [[Informatique/README|💻 Informatique]]
