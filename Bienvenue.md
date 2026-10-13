@@ -8,7 +8,7 @@ Bienvenue dans ton coffre de fiches de révision structurées, synchronisées au
 
 ### 💻 Informatique & Programmation
 - [[Informatique/README|📘 Architecture & Assembleur 68000]] (Cours complet & TPs 1, 2, 3)
-- [[Programmation/README|💻 Programmation Système Avancée en C]] (TPs Bimestre 5 : Flying Machines & SDL2)
+- [[Programmation/README|💻 Programmation Système Avancée en C]] (Système UNIX : Processus & Threads, TPs Bimestre 5)
 - [[Algorithmique/README|🧠 Algorithmique Avancée]] (Graphes, Parcours DFS/BFS, Connexité, ABR & AVL)
 
 ### 📐 Mathématiques

@@ -2,8 +2,9 @@
 
 Index des fiches et travaux pratiques du module de Programmation C (EPITA S3).
 
-## 🧬 Système UNIX & Processus POSIX
+## 🧬 Système UNIX, Processus & Threads POSIX
 - [[Processus-Fork-Systeme|🧬 Processus, fork(2), Synchronisation wait(2), exec*, Tubes pipe(2) & Redirections]]
+- [[Threads-POSIX-Pthreads|🧵 Threads POSIX (pthreads), Mutex, Variables de Condition & Synchronisation Concurrente]]
 
 ## 📅 Bimestre 5 (PROG-205)
 - [[TP-C-Flying-Machines|✈️ TP Flying Machines : Entrées/Sorties Fichiers, Parsing CSV robuste & Bibliothèques Statiques]]
